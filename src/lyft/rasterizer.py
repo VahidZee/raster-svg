@@ -21,12 +21,8 @@ AGENT_TYPE = 4
 EGO_TYPE = 5
 
 
-def normalize_line(line, raster_size, origin):
-    vector = line / CV2_SHIFT_VALUE
-    # vector = vector + origin
-    vector[:, 1] = vector[:, 1] + origin[1]
-    vector[:, 0] = vector[:, 0] + origin[0]
-    return vector
+def normalize_line(line):
+    return line / CV2_SHIFT_VALUE
 
 
 def path_type_to_number(path_type):
@@ -79,7 +75,6 @@ def render_semantic_map(
 
     # setup canvas
     raster_size = self.render_context.raster_size_px
-    origin = self.render_context.center_in_raster_ratio * raster_size
     res = dict(path=list(), path_type=list())
     for idx in elements_within_bounds(center_in_world, self.bounds_info["lanes"]["bounds"], raster_radius):
         lane = self.proto_API[self.bounds_info["lanes"]["ids"][idx]].element.lane
@@ -88,8 +83,9 @@ def render_semantic_map(
         lane_coords = self.proto_API.get_lane_coords(self.bounds_info["lanes"]["ids"][idx])
         xy_left = cv2_subpixel(transform_points(lane_coords["xyz_left"][:, :2], raster_from_world))
         xy_right = cv2_subpixel(transform_points(lane_coords["xyz_right"][:, :2], raster_from_world))
-        xy_left = normalize_line(xy_left, raster_size, origin)
-        xy_right = normalize_line(xy_right, raster_size, origin)
+        xy_left = normalize_line(xy_left)
+        xy_right = normalize_line(xy_right)
+
         lane_type = "black"  # no traffic light face is controlling this lane
         if tl_face_color:
             lane_tl_ids = set([MapAPI.id_as_str(la_tc) for la_tc in lane.traffic_controls])
@@ -102,8 +98,11 @@ def render_semantic_map(
                     lane_type = "yellow"
 
         for vector in [xy_left, xy_right]:
-            res['path'].append(vector)
-            res['path_type'].append(path_type_to_number(lane_type))
+            vector = vector[(vector[:, 0] >= 0.) * (vector[:, 0] <= raster_size[0])]
+            vector = vector[(vector[:, 1] >= 0.) * (vector[:, 1] <= raster_size[1])]
+            if len(vector):
+                res['path'].append(vector)
+                res['path_type'].append(path_type_to_number(lane_type))
     return res
 
 
@@ -281,10 +280,10 @@ def rasterize_box(
         print('call ended')
     res['agents'] = [normalize_line(
         cv2_subpixel(transform_points(np.array(path).reshape((-1, 2)), raster_from_world)),
-        raster_size, origin) for idx, path in res['agents'].items()]
+        ) for idx, path in res['agents'].items()]
     res['ego'] = normalize_line(
         cv2_subpixel(transform_points(np.array(res['ego']).reshape((-1, 2)), raster_from_world)),
-        raster_size, origin)
+        )
     return res
 
 
