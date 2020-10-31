@@ -34,11 +34,11 @@ class Config(Config):
 
         # Optimization
         self.learning_rate = 1e-3 * num_gpus
-        self.train_batch_size = 32
-        self.val_batch_size = 32
+        self.train_batch_size = 16
+        self.val_batch_size = 16
 
-        self.val_every = 2000
-        self.log_every = 50
+        self.val_every = 200
+        self.log_every = 10
         self.ckpt_every = 10
 
         self.val_num_steps = 5
