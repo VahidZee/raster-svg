@@ -124,7 +124,7 @@ class AgentDataset(torch.utils.data.Dataset):
     def _load_tensor(self, icon_id):
         item = self.data[icon_id]
         if self.svg and self.svg_cmds:
-            tens = SVG.from_tensor(item['path']).split_paths().to_tensor(concat_groups=False)
+            tens = SVG.from_tensor(item['path']).simplify().split_paths().to_tensor(concat_groups=False)
             svg = apply_colors(tens, item['path_type'])
         return svg
 
@@ -158,7 +158,7 @@ class AgentDataset(torch.utils.data.Dataset):
     def get(self, idx=0, model_args=None, random_aug=True, id=None, svg: SVG = None):
         item = self.data[idx]
         if self.svg and self.svg_cmds:
-            tens = SVG.from_tensor(item['path']).split_paths().to_tensor(concat_groups=False)
+            tens = SVG.from_tensor(item['path']).simplify().split_paths().to_tensor(concat_groups=False)
             svg = apply_colors(tens, item['path_type'])
             del item['path']
             del item['path_type']
