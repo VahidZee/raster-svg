@@ -1,4 +1,3 @@
-from __future__ import annotations
 from .geom import *
 from deepsvg.difflib.tensor import SVGTensor
 from .util_fns import get_roots
@@ -48,7 +47,7 @@ class SVGCommand:
         raise NotImplementedError
 
     @staticmethod
-    def from_str(cmd_str: str, args_str: List[Num], pos=None, initial_pos=None, prev_command: SVGCommand = None):
+    def from_str(cmd_str: str, args_str: List[Num], pos=None, initial_pos=None, prev_command = None):
         if pos is None:
             pos = Point(0.)
         if initial_pos is None:
@@ -167,7 +166,7 @@ class SVGCommand:
     def reverse(self):
         raise NotImplementedError
 
-    def is_left_to(self, other: SVGCommand):
+    def is_left_to(self, other):
         p1, p2 = self.start_pos, other.start_pos
 
         if p1.y == p2.y:
@@ -359,7 +358,7 @@ class SVGCommandBezier(SVGCommand):
 
         raise NotImplementedError
 
-    def angle(self, other: SVGCommandBezier):
+    def angle(self, other):
         t1, t2 = self.derivative(1.), -other.derivative(0.)
         if np.isclose(t1.norm(), 0.) or np.isclose(t2.norm(), 0.):
             return 0.
