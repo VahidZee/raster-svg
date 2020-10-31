@@ -136,7 +136,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
                 entery = [*model_args, params_dict, True]
                 output,conf = model(entery)
                 loss_dict = {}
-                loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'], output, conf, data.get('target_availabilities', None)).mean()
+                loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
                 if step >= optimizer_start:
                     loss_dict['loss'].backward()
                     if model_cfg.grad_clip is not None:
@@ -192,7 +192,7 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
         entery = [*model_args, params_dict, True]
         output,conf = model(entery)
         loss_dict = {}
-        loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'], output, conf, data.get('target_availabilities', None)).mean()
+        loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
 
         stats.update_stats_to_print("val", loss_dict)
 
