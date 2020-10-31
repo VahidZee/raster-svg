@@ -184,11 +184,19 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
             continue
         step = n_iter
 
-        if model_cfg.val_num_steps is not None and step > model_cfg.val_num_steps:
-            return
 
         model_args = [data['image'][arg].to(device) for arg in model_cfg.model_args]
         params_dict, weights_dict = model_cfg.get_params(step, epoch), model_cfg.get_weights(step, epoch)
+
+        if model_cfg.val_num_steps is not None and step > model_cfg.val_num_steps:
+            stats.update("val", step, epoch, {
+                **weights_dict,
+                "time": timer.get_elapsed_time()
+            })
+            print(stats.get_summary("val"))
+            stats.write_tensorboard(summary_writer, "val")
+            summary_writer.flush()
+            return
 
         entery = [*model_args, params_dict, True]
         output,conf = model(entery)
@@ -201,16 +209,6 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
             **loss_dict
         })
 
-
-        if step % model_cfg.log_every == 0:
-            stats.update("val", step, epoch, {
-                **weights_dict,
-                "time": timer.get_elapsed_time()
-            })
-            print(stats.get_summary("val"))
-            stats.write_tensorboard(summary_writer, "val")
-            summary_writer.flush()
-        return
 
 
 if __name__ == "__main__":
