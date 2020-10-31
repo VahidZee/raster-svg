@@ -26,7 +26,7 @@ class Config(Config):
 
 
         # Dataloader
-        self.loader_num_workers = 20 * num_gpus
+        self.loader_num_workers = 55 * 2
 
         # Training
         self.num_epochs = 100

@@ -116,6 +116,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
     epoch_range = utils.infinite_range(stats.epoch) if model_cfg.num_epochs is None else range(stats.epoch, cfg.num_epochs)
     print(epoch_range)
+    timer.reset()
     for epoch in epoch_range:
         print(f"Epoch {epoch+1}")
 
@@ -163,10 +164,11 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
                 print(stats.get_summary("train"))
                 stats.write_tensorboard(summary_writer, "train")
                 summary_writer.flush()
+                timer.reset()
 
             if step % model_cfg.val_every == 0:
+                timer.reset()
                 validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer,optimizer.param_groups[0]['lr'])
-
                 timer.reset()
 
             if not debug and step % model_cfg.ckpt_every == 0:
