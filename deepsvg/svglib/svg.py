@@ -7,7 +7,6 @@ import cairosvg
 from PIL import Image
 import io
 import os
-from moviepy.editor import ImageClip, concatenate_videoclips, ipython_display
 import math
 import random
 import networkx as nx
@@ -376,17 +375,6 @@ class SVG:
 
         return clips
 
-    def animate(self, file_path=None, frame_duration=0.1, do_display=True):
-        clips = self.to_video(lambda img: ImageClip(img).set_duration(frame_duration))
-
-        clip = concatenate_videoclips(clips, method="compose", bg_color=(255, 255, 255))
-
-        if file_path is not None:
-            clip.write_gif(file_path, fps=24, verbose=False, logger=None)
-
-        if do_display:
-            src = clip if file_path is None else file_path
-            ipd.display(ipython_display(src, fps=24, rd_kwargs=dict(logger=None), autoplay=1, loop=1))
 
     def numericalize(self, n=256):
         self.normalize(viewbox=Bbox(n))
