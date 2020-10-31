@@ -1,6 +1,5 @@
 pytorch-lightning
 l5kit
-captum
 numpy
 matplotlib
 seaborn
