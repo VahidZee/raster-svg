@@ -26,22 +26,22 @@ class Config(Config):
 
 
         # Dataloader
-        self.loader_num_workers = 4 * num_gpus
+        self.loader_num_workers = 20 * num_gpus
 
         # Training
-        self.num_epochs = 50
-        self.val_every = 1000
+        self.num_epochs = 100
+        self.val_every = 2000
 
         # Optimization
         self.learning_rate = 1e-3 * num_gpus
-        self.train_batch_size = 1
-        self.val_batch_size = 1
+        self.train_batch_size = 32
+        self.val_batch_size = 32
 
-        self.val_every = 1
-        self.log_every = 1
-        self.ckpt_every = 2
+        self.val_every = 2000
+        self.log_every = 50
+        self.ckpt_every = 10
 
-        self.val_num_steps = 4
+        self.val_num_steps = 5
         self.stats_to_print = {
             "train": ["lr", "time"],
             "val": ["time"]
