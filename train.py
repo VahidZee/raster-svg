@@ -117,12 +117,14 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
     epoch_range = utils.infinite_range(stats.epoch) if model_cfg.num_epochs is None else range(stats.epoch, cfg.num_epochs)
     print(epoch_range)
     timer.reset()
+    print(timer.get_elapsed_time())
     for epoch in epoch_range:
         print(f"Epoch {epoch+1}")
-
+        print(timer.get_elapsed_time())
         for n_iter, data in enumerate(train_dataloader):
             if data is None:
                 continue
+            print(timer.get_elapsed_time())
             step = n_iter + epoch * len(train_dataloader)
 
             if model_cfg.num_steps is not None and step > model_cfg.num_steps:

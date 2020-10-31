@@ -26,7 +26,7 @@ class Config(Config):
 
 
         # Dataloader
-        self.loader_num_workers = 55 * 2
+        self.loader_num_workers = 60
 
         # Training
         self.num_epochs = 100
