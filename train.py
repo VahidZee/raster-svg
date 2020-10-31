@@ -167,8 +167,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
             if step % model_cfg.val_every == 0:
                 timer.reset()
-                validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer,optimizer.param_groups[0]['lr'])
-                timer.reset()
+                validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer)
 
             if not debug and step % model_cfg.ckpt_every == 0:
                 utils.save_ckpt_list(checkpoint_dir, model, model_cfg, optimizers, scheduler_lrs, scheduler_warmups, stats, train_vars)
@@ -177,7 +176,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
 
 
-def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,timer,lr):
+def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,timer):
     model.eval()
     for n_iter, data in enumerate(val_dataloader):
         if data is None:
