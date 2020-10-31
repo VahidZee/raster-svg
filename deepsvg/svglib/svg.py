@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .geom import *
 from xml.dom import expatbuilder
 import torch
@@ -28,7 +29,7 @@ class SVG:
         self.svg_path_groups = svg_path_groups
         self.viewbox = viewbox
 
-    def __add__(self, other: ipd.SVG):
+    def __add__(self, other: SVG):
         svg = self.copy()
         svg.svg_path_groups.extend(other.svg_path_groups)
         return svg
