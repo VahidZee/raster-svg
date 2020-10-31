@@ -52,10 +52,10 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
     train_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = train_zarr, rasterizer = rasterizer,
                                  model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len)
+                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50)
     val_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = val_zarr, rasterizer = rasterizer,
                                  model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len)
+                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50)
 
     if model_cfg.train_idxs is not None:
         train_dataset = Subset(train_dataset, model_cfg.train_idxs)
