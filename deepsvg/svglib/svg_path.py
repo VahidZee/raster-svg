@@ -1,4 +1,3 @@
-from __future__ import annotations
 from .geom import *
 import deepsvg.svglib.geom as geom
 import re
