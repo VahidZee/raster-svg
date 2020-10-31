@@ -63,9 +63,9 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
         val_dataset = Subset(val_dataset, model_cfg.val_idxs)
 
     train_dataloader = DataLoader(train_dataset, batch_size=model_cfg.train_batch_size, shuffle=True,
-                            num_workers=0,collate_fn=my_collate)
+                            num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
     validat_dataloader = DataLoader(val_dataset, batch_size=model_cfg.val_batch_size, shuffle=False,
-                                  num_workers=0,collate_fn=my_collate)
+                                  num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
 
     model = ModelTrajectory(model_cfg=model_cfg, data_config= data_cfg, modes=3).to(device)
     stats = Stats(num_steps=model_cfg.num_steps, num_epochs=model_cfg.num_epochs, steps_per_epoch=len(train_dataloader),
@@ -159,17 +159,17 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
                 "time": timer.get_elapsed_time()
             })
 
-            if step % model_cfg.log_every == 0 and step > 0:
+            if step % model_cfg.log_every == 0:
                 print(stats.get_summary("train"))
                 stats.write_tensorboard(summary_writer, "train")
                 summary_writer.flush()
 
-            if step % model_cfg.val_every == 0 :
+            if step % model_cfg.val_every == 0:
                 validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer,optimizer.param_groups[0]['lr'])
 
                 timer.reset()
 
-            if not debug and step % model_cfg.ckpt_every == 0 and step > 0:
+            if not debug and step % model_cfg.ckpt_every == 0:
                 utils.save_ckpt_list(checkpoint_dir, model, model_cfg, optimizers, scheduler_lrs, scheduler_warmups, stats, train_vars)
                 print("save checkpoint")
 
