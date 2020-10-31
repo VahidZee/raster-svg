@@ -154,17 +154,16 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
                     ("lr" if i == 1 else f"lr_{i}"): optimizer.param_groups[0]['lr'],
                     **loss_dict
                 })
-            print(timer.get_elapsed_time())
-            stats.update("train", step, epoch, {
-                **weights_dict,
-                "time": timer.get_elapsed_time()
-            })
 
             if step % model_cfg.log_every == 0:
+
+                stats.update("train", step, epoch, {
+                    **weights_dict,
+                    "time": timer.get_elapsed_time()
+                })
                 print(stats.get_summary("train"))
                 stats.write_tensorboard(summary_writer, "train")
                 summary_writer.flush()
-                timer.reset()
 
             if step % model_cfg.val_every == 0:
                 timer.reset()
@@ -202,12 +201,12 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
             **loss_dict
         })
 
-        stats.update("val", step, epoch, {
-            **weights_dict,
-            "time": timer.get_elapsed_time()
-        })
 
         if step % model_cfg.log_every == 0:
+            stats.update("val", step, epoch, {
+                **weights_dict,
+                "time": timer.get_elapsed_time()
+            })
             print(stats.get_summary("val"))
             stats.write_tensorboard(summary_writer, "val")
             summary_writer.flush()
