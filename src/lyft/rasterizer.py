@@ -12,7 +12,6 @@ import warnings
 import torch
 import cv2
 from collections import defaultdict
-import drawSvg as draw
 from src.lyft.utils import linear_path_to_tensor
 
 CV2_SHIFT = 8
@@ -64,7 +63,7 @@ def render_semantic_map(
         center_in_world (np.ndarray): XY of the image center in world ref system
         raster_from_world (np.ndarray):
     Returns:
-        th.Union[draw.Drawing, dict]
+        th.Union[torch.Tensor, dict]
     """
     # filter using half a radius from the center
     raster_radius = float(np.linalg.norm(self.raster_size * self.pixel_size)) / 2
@@ -131,61 +130,16 @@ def rasterize_semantic(
     res = self.render_semantic_map(center_in_world_m, raster_from_world, history_tl_faces[0])
 
     svg_args = svg_args or dict()
-    if svg_args.get('return_cmds', True) and svg:
+    if svg:
         res['path'] = torch.cat(
             [linear_path_to_tensor(path, svg_args.get('pad_val', -1)) for
              path in res['path']], 0)
-    elif svg:
-        raster_size = self.render_context.raster_size_px
-        origin = self.render_context.center_in_raster_ratio * raster_size
-        d = draw.Drawing(*raster_size, origin=tuple(origin), displayInline=False)
-        for vector, vector_type in zip(res['path'], res['path_type']):
-            d.append(draw.Lines(*vector.reshape(-1), close=False, stroke=lane_color(vector_type), fill='none'))
-        res = d
     return res
 
 
-def draw_boxes(
-        raster_size: th.Tuple[int, int],
-        raster_from_world: np.ndarray,
-        agents: np.ndarray,
-        color: th.Union[int, th.Tuple[int, int, int]],
-) -> np.ndarray:
-    """
-    Draw multiple boxes in one sweep over the image.
-    Boxes corners are extracted from agents, and the coordinates are projected in the image plane.
-    Finally, cv2 draws the boxes.
-
-    Args:
-        raster_size (Tuple[int, int]): Desired output image size
-        world_to_image_space (np.ndarray): 3x3 matrix to convert from world to image coordinated
-        agents (np.ndarray): array of agents to be drawn
-        color (Union[int, Tuple[int, int, int]]): single int or RGB color
-
-    Returns:
-        np.ndarray: the image with agents rendered. RGB if color RGB, otherwise GRAY
-    """
-    if isinstance(color, int):
-        im = np.zeros((raster_size[1], raster_size[0]), dtype=np.uint8)
-    else:
-        im = np.zeros((raster_size[1], raster_size[0], 3), dtype=np.uint8)
-
-    box_world_coords = np.zeros((len(agents), 4, 2))
-    corners_base_coords = np.asarray([[-1, -1], [-1, 1], [1, 1], [1, -1]])
-
-    # compute the corner in world-space (start in origin, rotate and then translate)
+def add_agents(res_dict, agents):
     for idx, agent in enumerate(agents):
-        corners = corners_base_coords * agent["extent"][:2] / 2  # corners in zero
-        r_m = yaw_as_rotation33(agent["yaw"])
-        box_world_coords[idx] = transform_points(corners, r_m) + agent["centroid"][:2]
-        print(idx, agent["centroid"][:2], transform_points(agent["centroid"][:2].reshape(-1, 2), raster_from_world),
-              cv2_subpixel(transform_points(agent["centroid"][:2].reshape(-1, 2), raster_from_world)))
-    box_raster_coords = transform_points(box_world_coords.reshape((-1, 2)), raster_from_world)
-    print('call ended')
-    # fillPoly wants polys in a sequence with points inside as (x,y)
-    box_raster_coords = cv2_subpixel(box_raster_coords.reshape((-1, 4, 2)))
-    cv2.fillPoly(im, box_raster_coords, color=color, lineType=cv2.LINE_AA, shift=CV2_SHIFT)
-    return im
+        res_dict[idx].append(agent["centroid"][:2])
 
 
 def rasterize_box(
@@ -194,7 +148,8 @@ def rasterize_box(
         history_agents: List[np.ndarray],
         history_tl_faces: List[np.ndarray],
         agent: Optional[np.ndarray] = None,
-) -> th.Union[dict, draw.Drawing]:
+        svg=False, svg_args=None,
+) -> th.Union[dict]:
     # all frames are drawn relative to this one"
     frame = history_frames[0]
     if agent is None:
@@ -207,83 +162,34 @@ def rasterize_box(
     raster_from_world = self.render_context.raster_from_world(ego_translation_m, ego_yaw_rad)
 
     # this ensures we always end up with fixed size arrays, +1 is because current time is also in the history
-    out_shape = (self.raster_size[1], self.raster_size[0], self.history_num_frames + 1)
-    agents_images = np.zeros(out_shape, dtype=np.uint8)
-    ego_images = np.zeros(out_shape, dtype=np.uint8)
-
+    res = dict(ego=list(), agents=defaultdict(list))
     for i, (frame, agents) in enumerate(zip(history_frames, history_agents)):
-        print('history index', i)
+        # print('history index', i)
         agents = filter_agents_by_labels(agents, self.filter_agents_threshold)
         # note the cast is for legacy support of dataset before April 2020
         av_agent = get_ego_as_agent(frame).astype(agents.dtype)
 
         if agent is None:
-            agents_image = draw_boxes(self.raster_size, raster_from_world, agents, 255)
-            ego_image = draw_boxes(self.raster_size, raster_from_world, av_agent, 255)
+            add_agents(res['agents'], av_agent)
+            res['ego'].append(av_agent[0]["centroid"][:2])
         else:
             agent_ego = filter_agents_by_track_id(agents, agent["track_id"])
             if len(agent_ego) == 0:  # agent not in this history frame
-                agents_image = draw_boxes(self.raster_size, raster_from_world, np.append(agents, av_agent), 255)
-                ego_image = np.zeros_like(agents_image)
+                add_agents(res['agents'], np.append(agents, av_agent))
             else:  # add av to agents and remove the agent from agents
                 agents = agents[agents != agent_ego[0]]
-                agents_image = draw_boxes(self.raster_size, raster_from_world, np.append(agents, av_agent), 255)
-                ego_image = draw_boxes(self.raster_size, raster_from_world, agent_ego, 255)
+                add_agents(res['agents'], np.append(agents, av_agent))
+                res['ego'].append(agent_ego[0]["centroid"][:2])
 
-        agents_images[..., i] = agents_image
-        ego_images[..., i] = ego_image
-
-    # combine such that the image consists of [agent_t, agent_t-1, agent_t-2, ego_t, ego_t-1, ego_t-2]
-    out_im = np.concatenate((agents_images, ego_images), -1)
-
-    return out_im.astype(np.float32) / 255
-
-    # all frames are drawn relative to this one"
-    frame = history_frames[0]
-    if agent is None:
-        ego_translation_m = history_frames[0]["ego_translation"]
-        ego_yaw_rad = rotation33_as_yaw(frame["ego_rotation"])
-    else:
-        ego_translation_m = np.append(agent["centroid"], history_frames[0]["ego_translation"][-1])
-        ego_yaw_rad = agent["yaw"]
-    raster_size = self.render_context.raster_size_px
-    origin = self.render_context.center_in_raster_ratio * raster_size
-
-    raster_from_world = self.render_context.raster_from_world(ego_translation_m, ego_yaw_rad)
-    res = dict(ego=list(), agents=defaultdict(list))
-    for i, (frame, agents) in enumerate(zip(history_frames, history_agents)):
-        print('history index', i)
-        agents = filter_agents_by_labels(agents, self.filter_agents_threshold)
-        # note the cast is for legacy support of dataset before April 2020
-        av_agent = get_ego_as_agent(frame).astype(agents.dtype)
-
-        if agent is None:
-            _agents = agents
-            _ego = av_agent
-        else:
-            agent_ego = filter_agents_by_track_id(agents, agent["track_id"])
-            _agents = np.append(agents, av_agent) if not len(agent_ego) else np.append(
-                agents[agents != agent_ego[0]], av_agent)
-            _ego = None if not len(agent_ego) else agent_ego
-
-        for idx, agent in enumerate(_agents):
-            res['agents'][idx].append(agent["centroid"][:2])
-            print(idx, agent["centroid"][:2], transform_points(agent["centroid"][:2].reshape(-1, 2), raster_from_world),
-                  cv2_subpixel(transform_points(agent["centroid"][:2].reshape(-1, 2), raster_from_world)))
-        print('call ended')
-        if _ego is not None:
-            res['ego'].append(_ego[0]["centroid"][:2])
-            print(0, _ego[0]["centroid"][:2],
-                  transform_points(_ego[0]["centroid"][:2].reshape(-1, 2), raster_from_world),
-                  cv2_subpixel(transform_points(_ego[0]["centroid"][:2].reshape(-1, 2), raster_from_world)))
-
-        print('call ended')
-    res['agents'] = [normalize_line(
-        cv2_subpixel(transform_points(np.array(path).reshape((-1, 2)), raster_from_world)),
-        ) for idx, path in res['agents'].items()]
+    res['agents'] = [normalize_line(cv2_subpixel(transform_points(np.array(path).reshape((-1, 2)), raster_from_world))
+                                    ) for idx, path in res['agents'].items()]
     res['ego'] = normalize_line(
-        cv2_subpixel(transform_points(np.array(res['ego']).reshape((-1, 2)), raster_from_world)),
-        )
+        cv2_subpixel(transform_points(np.array(res['ego']).reshape((-1, 2)), raster_from_world)))
+    if svg:
+        svg_args = svg_args or dict()
+        res['path'] = torch.cat([linear_path_to_tensor(path, svg_args.get('pad_val', -1)) for path in res['agents']
+                                 ] + [linear_path_to_tensor(res['ego'], svg_args.get('pad_val', -1))], 0)
+        res['path_type'] = [path_type_to_number('agent')] * len(res['agents']) + [path_type_to_number('ego')]
     return res
 
 
@@ -365,12 +271,11 @@ def rasterize_sem_box(
     if not svg:
         return {**res_box, **res_sat}
     svg_args = svg_args or dict()
-    raster_size = self.render_context.raster_size_px
-    origin = self.render_context.center_in_raster_ratio * raster_size
-    d = draw.Drawing(*raster_size, origin=tuple(origin), displayInline=False, **svg_args)
-    for vector, vector_type in zip(res_sat['path'], res_sat['path_type']):
-        d.append(draw.Lines(*vector.reshape(-1), close=False, stroke=lane_color(vector_type), fill='none'))
-    for vector in res_box['agents']:
-        d.append(draw.Lines(*vector.reshape(-1), close=False, stroke=lane_color(AGENT_TYPE), fill='none'))
-    d.append(draw.Lines(*res_box['ego'].reshape(-1), close=False, stroke=lane_color(EGO_TYPE), fill='none'))
-    return d
+    res = dict()
+    res['path'] = torch.cat(
+        [linear_path_to_tensor(path, svg_args.get('pad_val', -1)) for path in res_sat['path']
+         ] + [linear_path_to_tensor(path, svg_args.get('pad_val', -1)) for path in res_box['agents']
+              ] + [linear_path_to_tensor(res_box['ego'], svg_args.get('pad_val', -1))], 0)
+    res['path_type'] = res_sat['path_type'] + [path_type_to_number('agent')] * len(res_box['agents']) + [
+        path_type_to_number('ego')]
+    return res
