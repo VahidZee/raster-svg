@@ -30,7 +30,6 @@ class Config(Config):
 
         # Training
         self.num_epochs = 100
-        self.val_every = 2000
 
         # Optimization
         self.learning_rate = 1e-3 * num_gpus
@@ -38,8 +37,8 @@ class Config(Config):
         self.val_batch_size = 16
 
         self.val_every = 200
-        self.log_every = 10
-        self.ckpt_every = 10
+        self.log_every = 200
+        self.ckpt_every = 200
 
         self.val_num_steps = 5
         self.stats_to_print = {

@@ -120,11 +120,9 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
     print(timer.get_elapsed_time())
     for epoch in epoch_range:
         print(f"Epoch {epoch+1}")
-        print(timer.get_elapsed_time())
         for n_iter, data in enumerate(train_dataloader):
             if data is None:
                 continue
-            print(timer.get_elapsed_time())
             step = n_iter + epoch * len(train_dataloader)
 
             if model_cfg.num_steps is not None and step > model_cfg.num_steps:
@@ -170,7 +168,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
             if step % model_cfg.val_every == 0:
                 timer.reset()
-                # validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer,optimizer.param_groups[0]['lr'])
+                validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer,optimizer.param_groups[0]['lr'])
                 timer.reset()
 
             if not debug and step % model_cfg.ckpt_every == 0:
