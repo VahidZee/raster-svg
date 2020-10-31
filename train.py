@@ -220,11 +220,17 @@ if __name__ == "__main__":
     parser.add_argument("--log-dir", type=str, default="./logs")
     parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument("--resume", type=str, default=" ")
+    parser.add_argument("--val_idxs", type=str, default=None)
+    parser.add_argument("--train_idxs", type=str, default=None)
 
     args = parser.parse_args()
 
     cfg = importlib.import_module(args.config_module).Config()
     model_name, experiment_name = args.config_module.split(".")[-2:]
     print(model_name,experiment_name)
+    if args.val_idxs is not None:
+        cfg.val_idxs = args.val_idxs
+    if args.train_idxs is not None:
+        cfg.train_idxs = args.train_idxs
     config_data = load_config_data(args.config_data)
     train(cfg, config_data, args.data_path, model_name, experiment_name, log_dir=args.log_dir, debug=args.debug, resume=args.resume)
