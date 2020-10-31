@@ -154,7 +154,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
                     ("lr" if i == 1 else f"lr_{i}"): optimizer.param_groups[0]['lr'],
                     **loss_dict
                 })
-
+            print(timer.get_elapsed_time())
             stats.update("train", step, epoch, {
                 **weights_dict,
                 "time": timer.get_elapsed_time()

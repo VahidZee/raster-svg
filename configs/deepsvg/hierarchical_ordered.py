@@ -36,9 +36,9 @@ class Config(Config):
         self.train_batch_size = 16
         self.val_batch_size = 16
 
-        self.val_every = 50
-        self.log_every = 50
-        self.ckpt_every = 50
+        self.val_every = 10
+        self.log_every = 10
+        self.ckpt_every = 10
 
         self.val_num_steps = 5
         self.stats_to_print = {
