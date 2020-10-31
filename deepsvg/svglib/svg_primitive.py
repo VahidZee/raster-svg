@@ -1,4 +1,3 @@
-from __future__ import annotations
 from .geom import *
 import torch
 import re
@@ -440,7 +439,7 @@ class SVGPathGroup(SVGPrimitive):
             nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
         return G
 
-    def bbox_overlap(self, other: SVGPathGroup):
+    def bbox_overlap(self, other):
         return self.bbox().overlap(other.bbox())
 
     def to_points(self):
