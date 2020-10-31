@@ -2,7 +2,6 @@ from .geom import *
 from xml.dom import expatbuilder
 import torch
 from typing import List, Union
-import IPython.display as ipd
 import cairosvg
 from PIL import Image
 import io
@@ -185,8 +184,6 @@ class SVG:
         svg_str = self.to_str(fill=fill, with_points=with_points, with_handles=with_handles, with_bboxes=with_bboxes,
                               with_markers=with_markers, color_firstlast=color_firstlast, with_moves=with_moves)
 
-        if do_display:
-            ipd.display(ipd.SVG(svg_str))
 
         if return_png:
             if file_path is None:
