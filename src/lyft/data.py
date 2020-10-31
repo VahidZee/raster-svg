@@ -2,14 +2,14 @@ import torch
 from l5kit.dataset import AgentDataset as _AgentDataset
 from l5kit.rasterization import build_rasterizer as _build_rasterizer
 
-from l5kit.rasterization import SemanticRasterizer, SemBoxRasterizer
+from l5kit.rasterization import SemanticRasterizer, SemBoxRasterizer, BoxRasterizer
 from src.lyft.rasterizer import (
-    render_semantic_map, rasterize_semantic, rasterize_sem_box, rasterize_box, get_frame)
+    render_semantic_map, rasterize_semantic, rasterize_sem_box, get_frame, rasterize_box)
 
 import functools
 import copy
 import types
-from deepsvg.svglib.svg import SVG
+from deepsvg.svglib.svg import SVG, Bbox
 from src.lyft.utils import apply_colors
 
 
@@ -34,16 +34,21 @@ def build_rasterizer(config, data_manager):
         if isinstance(rasterizer, SemBoxRasterizer):
             rasterize_sem = functools.partial(rasterize_semantic, svg=False, svg_args=None)
             rasterize_sembox = functools.partial(rasterize_sem_box, svg=svg, svg_args=svg_args)
+            rasterize_b = functools.partial(rasterize_box, svg=False, svg_args=svg_args)
             rasterizer.sat_rast.render_semantic_map = types.MethodType(render_semantics, rasterizer.sat_rast)
             rasterizer.sat_rast.rasterize = types.MethodType(rasterize_sem, rasterizer.sat_rast)
             rasterizer.rasterize = types.MethodType(rasterize_sembox, rasterizer)
-            rasterizer.box_rast.rasterize = types.MethodType(rasterize_box, rasterizer.box_rast)
+            rasterizer.box_rast.rasterize = types.MethodType(rasterize_b, rasterizer.box_rast)
+
+        if isinstance(rasterizer, BoxRasterizer):
+            rasterize_b = functools.partial(rasterize_box, svg=svg, svg_args=svg_args)
+            rasterizer.rasterize = types.MethodType(rasterize_b, rasterizer)
 
     return rasterizer
 
 
-def agent_dataset(cfg: dict, zarr_dataset, rasterizer, perturbation=None, agents_mask=None, min_frame_history=10,
-                  min_frame_future=1):
+def agent_dataset(cfg: dict, zarr_dataset, rasterizer, perturbation=None, agents_mask=None,
+                  min_frame_history=10, min_frame_future=1):
     data = _AgentDataset(cfg, zarr_dataset, rasterizer, perturbation, agents_mask, min_frame_history, min_frame_future)
     map_type = cfg['raster_params']['map_type']
     svg = map_type.startswith('svg_')
@@ -62,17 +67,20 @@ class AgentDataset(torch.utils.data.Dataset):
         self.svg = map_type.startswith('svg_')
         self.svg_cmds = self.svg_args.get('return_cmds', True)
         self.tensor = map_type.startswith('tensor_')
+        self.cfg = cfg
         self.data = agent_dataset(
             cfg, zarr_dataset, rasterizer, perturbation, agents_mask, min_frame_history, min_frame_future)
 
     def __getitem__(self, i):
         item = self.data[i]
         if self.svg and self.svg_cmds:
-            tens = SVG.from_tensor(item['path']).simplify().split_paths().to_tensor(concat_groups=False)
-            svg = apply_colors(tens, item['path_type'])
+            tens = SVG.from_tensor(item['path']).simplify().split_paths()
+            tens.viewbox = Bbox(0, 0, *self.cfg['raster_params']['raster_size'])
+            svg = apply_colors(tens.to_tensor(concat_groups=False), item['path_type'])
             del item['path']
             del item['path_type']
             item['svg'] = svg
+            item['image'] = tens
         return item
 
     def __len__(self):

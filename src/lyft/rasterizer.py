@@ -54,6 +54,12 @@ def lane_color(path_number):
         return 'cyan'
 
 
+def crop_tensor(vector, raster_size):
+    vector = vector[(vector[:, 0] >= 0.) * (vector[:, 0] <= raster_size[0])]
+    vector = vector[(vector[:, 1] >= 0.) * (vector[:, 1] <= raster_size[1])]
+    return vector
+
+
 def render_semantic_map(
         self, center_in_world: np.ndarray, raster_from_world: np.ndarray, tl_faces: np.ndarray = None,
         tl_face_color=True
@@ -97,8 +103,7 @@ def render_semantic_map(
                     lane_type = "yellow"
 
         for vector in [xy_left, xy_right]:
-            vector = vector[(vector[:, 0] >= 0.) * (vector[:, 0] <= raster_size[0])]
-            vector = vector[(vector[:, 1] >= 0.) * (vector[:, 1] <= raster_size[1])]
+            vector = crop_tensor(vector, raster_size)
             if len(vector):
                 res['path'].append(vector)
                 res['path_type'].append(path_type_to_number(lane_type))
@@ -111,8 +116,7 @@ def rasterize_semantic(
         history_agents: List[np.ndarray],
         history_tl_faces: List[np.ndarray],
         agent: Optional[np.ndarray] = None,
-        svg=False,
-        svg_args=None,
+        svg=False, svg_args=None,
 ):
     if agent is None:
         ego_translation_m = history_frames[0]["ego_translation"]
@@ -132,14 +136,21 @@ def rasterize_semantic(
     svg_args = svg_args or dict()
     if svg:
         res['path'] = torch.cat(
-            [linear_path_to_tensor(path, svg_args.get('pad_val', -1)) for
-             path in res['path']], 0)
+            [linear_path_to_tensor(path, svg_args.get('pad_val', -1)) for path in res['path']], 0)
     return res
 
 
 def add_agents(res_dict, agents):
     for idx, agent in enumerate(agents):
         res_dict[idx].append(agent["centroid"][:2])
+
+
+def calc_max_grad(path):
+    return np.sqrt(np.square(np.diff(path, axis=0)).sum(1)).max()
+
+
+def is_noisy(path, ref_grad, tolerance=20):
+    return (len(path) < 2) or calc_max_grad(path) > (ref_grad + tolerance)
 
 
 def rasterize_box(
@@ -158,9 +169,9 @@ def rasterize_box(
     else:
         ego_translation_m = np.append(agent["centroid"], history_frames[0]["ego_translation"][-1])
         ego_yaw_rad = agent["yaw"]
-
+    svg_args = svg_args or dict()
     raster_from_world = self.render_context.raster_from_world(ego_translation_m, ego_yaw_rad)
-
+    raster_size = self.render_context.raster_size_px
     # this ensures we always end up with fixed size arrays, +1 is because current time is also in the history
     res = dict(ego=list(), agents=defaultdict(list))
     for i, (frame, agents) in enumerate(zip(history_frames, history_agents)):
@@ -180,13 +191,18 @@ def rasterize_box(
                 agents = agents[agents != agent_ego[0]]
                 add_agents(res['agents'], np.append(agents, av_agent))
                 res['ego'].append(agent_ego[0]["centroid"][:2])
-
+    tolerance = svg_args.get('tolerance', 20.)
+    _ego = normalize_line(
+        cv2_subpixel(transform_points(np.array(res['ego']).reshape((-1, 2)), raster_from_world)))
+    res['ego'] = crop_tensor(_ego, raster_size)
+    ego_grad = calc_max_grad(res['ego'])
     res['agents'] = [normalize_line(cv2_subpixel(transform_points(np.array(path).reshape((-1, 2)), raster_from_world))
                                     ) for idx, path in res['agents'].items()]
-    res['ego'] = normalize_line(
-        cv2_subpixel(transform_points(np.array(res['ego']).reshape((-1, 2)), raster_from_world)))
+    res['agents'] = [
+        crop_tensor(path, raster_size) for path in res['agents'] if not is_noisy(path, ego_grad, tolerance)]
+    res['agents'] = [path for path in res['agents'] if len(path)]
+
     if svg:
-        svg_args = svg_args or dict()
         res['path'] = torch.cat([linear_path_to_tensor(path, svg_args.get('pad_val', -1)) for path in res['agents']
                                  ] + [linear_path_to_tensor(res['ego'], svg_args.get('pad_val', -1))], 0)
         res['path_type'] = [path_type_to_number('agent')] * len(res['agents']) + [path_type_to_number('ego')]
