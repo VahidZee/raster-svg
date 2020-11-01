@@ -26,6 +26,9 @@ import pandas as pd
 import os
 import pickle
 
+import csv
+
+
 
 def build_rasterizer(config, data_manager):
     map_type = config['raster_params']['map_type']
@@ -74,7 +77,7 @@ def agent_dataset(cfg: dict, zarr_dataset, rasterizer, perturbation=None, agents
 
 class AgentDataset(torch.utils.data.Dataset):
     def __init__(self, data_cfg: dict, zarr_dataset, rasterizer,
-                 model_args, max_num_groups, max_seq_len,
+                 model_args, max_num_groups, max_seq_len, csv_path,
                  perturbation=None, agents_mask=None,
                  min_frame_history=10, min_frame_future=1,
                  max_total_len=None, filter_uni=None, filter_platform=None,
@@ -101,6 +104,10 @@ class AgentDataset(torch.utils.data.Dataset):
         self.model_args = model_args
 
         self.PAD_VAL = PAD_VAL
+
+        fieldnames = ["idx", "len_path", "max_len_commands"]
+        self.writer = csv.DictWriter(open(csv_path+"/full_result.csv", "w"), fieldnames)
+        self.writer.writeheader()
 
 
 
@@ -158,18 +165,19 @@ class AgentDataset(torch.utils.data.Dataset):
     def get(self, idx=0, model_args=None, random_aug=True, id=None, svg: SVG = None):
         item = self.data[idx]
         if self.svg and self.svg_cmds:
-            tens = SVG.from_tensor(item['path']).simplify().split_paths().to_tensor(concat_groups=False)
+            tens = self.simplify(SVG.from_tensor(item['path'])).split_paths().to_tensor(concat_groups=False)
             svg = apply_colors(tens, item['path_type'])
             del item['path']
             del item['path_type']
-            item['image'] = self.get_data(svg, None, model_args=model_args, label=None)
+            item['image'] = self.get_data(idx,svg, None, model_args=model_args, label=None)
             if item['image'] is None:
                 return
         return item
 
-    def get_data(self, t_sep, fillings, model_args=None, label=None):
+    def get_data(self, idx, t_sep, fillings, model_args=None, label=None):
         res = {}
-
+        max_len_commands = 0
+        len_path = len(t_sep)
         if model_args is None:
             model_args = self.model_args
 
@@ -179,9 +187,18 @@ class AgentDataset(torch.utils.data.Dataset):
 
         t_grouped = [SVGTensor.from_data(torch.cat(t_sep, dim=0), PAD_VAL=self.PAD_VAL).add_eos().add_sos().pad(
             seq_len=self.MAX_TOTAL_LEN + 2)]
-        t_sep = [SVGTensor.from_data(t, PAD_VAL=self.PAD_VAL).add_eos().add_sos().pad(
-            seq_len=self.MAX_SEQ_LEN + 2) for t in t_sep]
-        if len(t_sep) > self.MAX_NUM_GROUPS:
+        t_normal = []
+        for t in t_sep:
+            s = SVGTensor.from_data(t, PAD_VAL=self.PAD_VAL)
+            if len(s.commands) > max_len_commands:
+                max_len_commands = len(s.commands)
+            t_normal.append(s.add_eos().add_sos().pad(
+                seq_len=self.MAX_SEQ_LEN + 2))
+        line = {"idx" : idx, "len_path" : len_path, "max_len_commands" : max_len_commands}
+        self.writer.writerow(line)
+        if max_len_commands > self.MAX_SEQ_LEN:
+            return None
+        if len_path > self.MAX_NUM_GROUPS:
             return None
 
         for arg in set(model_args):
@@ -190,7 +207,7 @@ class AgentDataset(torch.utils.data.Dataset):
                 t_list = t_grouped
             else:
                 arg_ = arg
-                t_list = t_sep
+                t_list = t_normal
 
             if arg_ == "tensor":
                 res[arg] = t_list

@@ -19,17 +19,17 @@ class Config(Config):
         self.filter_category = None
         self.train_ratio = 1.0
 
-        self.max_num_groups = 500
-        self.max_seq_len = 30
-        self.max_total_len = 15000
+        self.max_num_groups = 250
+        self.max_seq_len = 20
+        self.max_total_len = 5000
 
 
 
         # Dataloader
-        self.loader_num_workers = 32
+        self.loader_num_workers = 0
 
         # Training
-        self.num_epochs = 100
+        self.num_epochs = 1
 
         # Optimization
         self.learning_rate = 1e-3 * num_gpus
