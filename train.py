@@ -26,6 +26,8 @@ import os
 from torch.utils.data.dataloader import default_collate
 from collections import defaultdict
 
+import pandas as pd
+
 
 def my_collate(batch):
     "Puts each data field into a tensor with outer dimension batch size"
@@ -52,15 +54,15 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
     train_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = train_zarr, rasterizer = rasterizer,
                                  model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50)
+                                 max_seq_len=model_cfg.max_seq_len)
     val_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = val_zarr, rasterizer = rasterizer,
                                  model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50)
+                                 max_seq_len=model_cfg.max_seq_len)
 
     if model_cfg.train_idxs is not None:
-        train_dataset = Subset(train_dataset, model_cfg.train_idxs)
+        train_dataset = Subset(train_dataset, pd.read_csv(model_cfg.train_idxs)['idx'])
     if model_cfg.val_idxs is not None:
-        val_dataset = Subset(val_dataset, model_cfg.val_idxs)
+        val_dataset = Subset(val_dataset, pd.read_csv(model_cfg.val_idxs)['idx'])
 
     train_dataloader = DataLoader(train_dataset, batch_size=model_cfg.train_batch_size, shuffle=True,
                             num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)

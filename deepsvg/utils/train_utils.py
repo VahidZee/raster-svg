@@ -116,7 +116,7 @@ def load_ckpt_list(checkpoint_dir, model, cfg=None, optimizers=None, scheduler_l
     if os.path.isfile(checkpoint_dir):
         checkpoint_path = checkpoint_dir
     else:
-        ckpts_paths = sorted(glob.glob(os.path.join(checkpoint_dir, "./[0-9]*.pth.tar")))
+        ckpts_paths = sorted(glob.glob(os.path.join(checkpoint_dir, "last.pth.tar")))
         if not ckpts_paths:
             return False
         checkpoint_path = ckpts_paths[-1]

@@ -166,10 +166,10 @@ class AgentDataset(torch.utils.data.Dataset):
         item = self.data[idx]
         if self.svg and self.svg_cmds:
             tens = self.simplify(SVG.from_tensor(item['path'])).split_paths().to_tensor(concat_groups=False)
-            svg = apply_colors(tens, item['path_type'])
+            # svg = apply_colors(tens, item['path_type'])
             del item['path']
             del item['path_type']
-            item['image'] = self.get_data(idx,svg, None, model_args=model_args, label=None)
+            item['image'] = self.get_data(idx,tens, None, model_args=model_args, label=None)
             if item['image'] is None:
                 return
         return item
