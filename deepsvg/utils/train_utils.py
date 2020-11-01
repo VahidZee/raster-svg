@@ -62,7 +62,7 @@ def save_ckpt_list(checkpoint_dir, model, cfg=None, optimizers=None, scheduler_l
     if train_vars is not None:
         state["train_vars"] = train_vars.to_dict()
 
-    checkpoint_path = os.path.join(checkpoint_dir, "{:06d}.pth.tar".format(stats.step))
+    checkpoint_path = os.path.join(checkpoint_dir, "last.pth.tar")
 
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
