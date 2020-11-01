@@ -77,11 +77,11 @@ def agent_dataset(cfg: dict, zarr_dataset, rasterizer, perturbation=None, agents
 
 class AgentDataset(torch.utils.data.Dataset):
     def __init__(self, data_cfg: dict, zarr_dataset, rasterizer,
-                 model_args, max_num_groups, max_seq_len, csv_path,
+                 model_args, max_num_groups, max_seq_len,
                  perturbation=None, agents_mask=None,
                  min_frame_history=10, min_frame_future=1,
                  max_total_len=None, filter_uni=None, filter_platform=None,
-                 filter_category=None, train_ratio=1.0, PAD_VAL=-1):
+                 filter_category=None, train_ratio=1.0, PAD_VAL=-1,csv_path=None):
 
         super().__init__()
         print(data_cfg)
@@ -105,9 +105,9 @@ class AgentDataset(torch.utils.data.Dataset):
 
         self.PAD_VAL = PAD_VAL
 
-        fieldnames = ["idx", "len_path", "max_len_commands"]
-        self.writer = csv.DictWriter(open(csv_path+"/full_result.csv", "w"), fieldnames)
-        self.writer.writeheader()
+        # fieldnames = ["idx", "len_path", "max_len_commands"]
+        # self.writer = csv.DictWriter(open(csv_path+"/full_result.csv", "w"), fieldnames)
+        # self.writer.writeheader()
 
 
 
@@ -176,11 +176,12 @@ class AgentDataset(torch.utils.data.Dataset):
 
     def get_data(self, idx, t_sep, fillings, model_args=None, label=None):
         res = {}
-        max_len_commands = 0
-        len_path = len(t_sep)
+        # max_len_commands = 0
+        # len_path = len(t_sep)
         if model_args is None:
             model_args = self.model_args
-
+        if len(t_sep) > self.MAX_NUM_GROUPS:
+            return None
         pad_len = max(self.MAX_NUM_GROUPS - len(t_sep), 0)
 
         t_sep.extend([torch.empty(0, 14)] * pad_len)
@@ -190,16 +191,16 @@ class AgentDataset(torch.utils.data.Dataset):
         t_normal = []
         for t in t_sep:
             s = SVGTensor.from_data(t, PAD_VAL=self.PAD_VAL)
-            if len(s.commands) > max_len_commands:
-                max_len_commands = len(s.commands)
+            if len(s.commands) > self.MAX_SEQ_LEN:
+                return None
             t_normal.append(s.add_eos().add_sos().pad(
                 seq_len=self.MAX_SEQ_LEN + 2))
-        line = {"idx" : idx, "len_path" : len_path, "max_len_commands" : max_len_commands}
-        self.writer.writerow(line)
-        if max_len_commands > self.MAX_SEQ_LEN:
-            return None
-        if len_path > self.MAX_NUM_GROUPS:
-            return None
+        # line = {"idx" : idx, "len_path" : len_path, "max_len_commands" : max_len_commands}
+        # self.writer.writerow(line)
+        # if max_len_commands > self.MAX_SEQ_LEN:
+        #     return None
+        # if len_path > self.MAX_NUM_GROUPS:
+        #     return None
 
         for arg in set(model_args):
             if "_grouped" in arg:

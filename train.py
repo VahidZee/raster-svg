@@ -52,10 +52,10 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
     train_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = train_zarr, rasterizer = rasterizer,
                                  model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50,csv_path=log_dir)
+                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50)
     val_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = val_zarr, rasterizer = rasterizer,
                                  model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50,csv_path=log_dir)
+                                 max_seq_len=model_cfg.max_seq_len,min_frame_future=50)
 
     if model_cfg.train_idxs is not None:
         train_dataset = Subset(train_dataset, model_cfg.train_idxs)
@@ -122,55 +122,55 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
         for n_iter, data in enumerate(train_dataloader):
             if data is None:
                 continue
-            # step = n_iter + epoch * len(train_dataloader)
-            #
-            # if model_cfg.num_steps is not None and step > model_cfg.num_steps:
-            #     return
-            #
-            # model.train()
-            # model_args = [data['image'][arg].to(device) for arg in model_cfg.model_args]
-            # params_dict, weights_dict = model_cfg.get_params(step, epoch), model_cfg.get_weights(step, epoch)
-            #
-            # for i, (loss_fn, optimizer, scheduler_lr, scheduler_warmup, optimizer_start) in enumerate(zip(loss_fns, optimizers, scheduler_lrs, scheduler_warmups, model_cfg.optimizer_starts), 1):
-            #     optimizer.zero_grad()
-            #     entery = [*model_args, params_dict, True]
-            #     output,conf = model(entery)
-            #     loss_dict = {}
-            #     loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
-            #     if step >= optimizer_start:
-            #         loss_dict['loss'].backward()
-            #         if model_cfg.grad_clip is not None:
-            #             nn.utils.clip_grad_norm_(model.parameters(), model_cfg.grad_clip)
-            #
-            #         optimizer.step()
-            #         if scheduler_lr is not None:
-            #             scheduler_lr.step()
-            #         if scheduler_warmup is not None:
-            #             scheduler_warmup.step()
-            #
-            #     stats.update_stats_to_print("train", loss_dict)
-            #     stats.update("train", step, epoch, {
-            #         ("lr" if i == 1 else f"lr_{i}"): optimizer.param_groups[0]['lr'],
-            #         **loss_dict
-            #     })
-            #
-            # if step % model_cfg.log_every == 0:
-            #
-            #     stats.update("train", step, epoch, {
-            #         **weights_dict,
-            #         "time": timer.get_elapsed_time()
-            #     })
-            #     print(stats.get_summary("train"))
-            #     stats.write_tensorboard(summary_writer, "train")
-            #     summary_writer.flush()
-            #
-            # if step % model_cfg.val_every == 0:
-            #     timer.reset()
-            #     validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer)
-            #
-            # if not debug and step % model_cfg.ckpt_every == 0:
-            #     utils.save_ckpt_list(checkpoint_dir, model, model_cfg, optimizers, scheduler_lrs, scheduler_warmups, stats, train_vars)
-            #     print("save checkpoint")
+            step = n_iter + epoch * len(train_dataloader)
+
+            if model_cfg.num_steps is not None and step > model_cfg.num_steps:
+                return
+
+            model.train()
+            model_args = [data['image'][arg].to(device) for arg in model_cfg.model_args]
+            params_dict, weights_dict = model_cfg.get_params(step, epoch), model_cfg.get_weights(step, epoch)
+
+            for i, (loss_fn, optimizer, scheduler_lr, scheduler_warmup, optimizer_start) in enumerate(zip(loss_fns, optimizers, scheduler_lrs, scheduler_warmups, model_cfg.optimizer_starts), 1):
+                optimizer.zero_grad()
+                entery = [*model_args, params_dict, True]
+                output,conf = model(entery)
+                loss_dict = {}
+                loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
+                if step >= optimizer_start:
+                    loss_dict['loss'].backward()
+                    if model_cfg.grad_clip is not None:
+                        nn.utils.clip_grad_norm_(model.parameters(), model_cfg.grad_clip)
+
+                    optimizer.step()
+                    if scheduler_lr is not None:
+                        scheduler_lr.step()
+                    if scheduler_warmup is not None:
+                        scheduler_warmup.step()
+
+                stats.update_stats_to_print("train", loss_dict)
+                stats.update("train", step, epoch, {
+                    ("lr" if i == 1 else f"lr_{i}"): optimizer.param_groups[0]['lr'],
+                    **loss_dict
+                })
+
+            if step % model_cfg.log_every == 0:
+
+                stats.update("train", step, epoch, {
+                    **weights_dict,
+                    "time": timer.get_elapsed_time()
+                })
+                print(stats.get_summary("train"))
+                stats.write_tensorboard(summary_writer, "train")
+                summary_writer.flush()
+
+            if step % model_cfg.val_every == 0:
+                timer.reset()
+                validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer)
+
+            if not debug and step % model_cfg.ckpt_every == 0:
+                utils.save_ckpt_list(checkpoint_dir, model, model_cfg, optimizers, scheduler_lrs, scheduler_warmups, stats, train_vars)
+                print("save checkpoint")
 
 
 

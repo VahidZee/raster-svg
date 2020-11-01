@@ -32,7 +32,7 @@ class Config(Config):
         self.num_epochs = 1
 
         # Optimization
-        self.learning_rate = 1e-3 * num_gpus
+        self.learning_rate = 1e-4
         self.train_batch_size = 16
         self.val_batch_size = 16
 
