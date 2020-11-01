@@ -29,7 +29,7 @@ class Config(Config):
         self.loader_num_workers = 32
 
         # Training
-        self.num_epochs = 1
+        self.num_epochs = 100
 
         # Optimization
         self.learning_rate = 1e-4
