@@ -1,4 +1,3 @@
-from __future__ import annotations
 import numpy as np
 from enum import Enum
 import torch
@@ -7,11 +6,11 @@ Num = Union[int, float]
 float_type = (int, float, np.float32)
 
 
-def det(a: Point, b: Point):
+def det(a, b):
     return a.pos[0] * b.pos[1] - a.pos[1] * b.pos[0]
 
 
-def get_rotation_matrix(angle: Union[Angle, float]):
+def get_rotation_matrix(angle):
     if isinstance(angle, Angle):
         theta = angle.rad
     else:
@@ -22,7 +21,7 @@ def get_rotation_matrix(angle: Union[Angle, float]):
     return rot_m
 
 
-def union_bbox(bbox_list: List[Bbox]):
+def union_bbox(bbox_list):
     res = None
     for bbox in bbox_list:
         res = bbox.union(res)
@@ -49,7 +48,7 @@ class Geom:
     def translate(self, vec):
         pass
 
-    def rotate(self, angle: Union[Angle, float]):
+    def rotate(self, angle):
         pass
 
     def numericalize(self, n=256):
@@ -133,36 +132,36 @@ class Point(Geom):
     def from_tensor(vector: torch.Tensor):
         return Point(*vector.tolist())
 
-    def translate(self, vec: Point):
+    def translate(self, vec):
         self.pos += vec.pos
 
     def matmul(self, m):
         return Point(m @ self.pos)
 
-    def rotate(self, angle: Union[Angle, float]):
+    def rotate(self, angle):
         rot_m = get_rotation_matrix(angle)
         return self.matmul(rot_m)
 
-    def rotate_(self, angle: Union[Angle, float]):
+    def rotate_(self, angle):
         rot_m = get_rotation_matrix(angle)
         self.pos = rot_m @ self.pos
 
     def scale(self, factor):
         self.pos *= factor
 
-    def dot(self, other: Point):
+    def dot(self, other):
         return self.pos.dot(other.pos)
 
     def norm(self):
         return float(np.linalg.norm(self.pos))
 
-    def cross(self, other: Point):
+    def cross(self, other):
         return np.cross(self.pos, other.pos)
 
-    def dist(self, other: Point):
+    def dist(self, other):
         return (self - other).norm()
 
-    def angle(self, other: Point, signed=False):
+    def angle(self, other, signed=False):
         rad = np.arccos(np.clip(self.normalize().dot(other.normalize()), -1., 1.))
 
         if signed:
@@ -170,7 +169,7 @@ class Point(Geom):
             rad *= sign
         return Angle.Rad(rad)
 
-    def distToLine(self, p1: Point, p2: Point):
+    def distToLine(self, p1, p2):
         if p1.isclose(p2):
             return self.dist(p1)
 
@@ -182,16 +181,16 @@ class Point(Geom):
     def numericalize(self, n=256):
         self.pos = self.pos.round().clip(min=0, max=n-1)
 
-    def isclose(self, other: Point):
+    def isclose(self, other):
         return np.allclose(self.pos, other.pos)
 
     def iszero(self):
         return np.all(self.pos == 0)
 
-    def pointwise_min(self, other: Point):
+    def pointwise_min(self, other):
         return Point(min(self.x, other.x), min(self.y, other.y))
 
-    def pointwise_max(self, other: Point):
+    def pointwise_max(self, other):
         return Point(max(self.x, other.x), max(self.y, other.y))
 
 
@@ -369,12 +368,12 @@ class Bbox(Geom):
         self.xy.scale(factor)
         self.wh.scale(factor)
 
-    def union(self, other: Bbox):
+    def union(self, other):
         if other is None:
             return self
         return Bbox(self.xy.pointwise_min(other.xy), self.xy2.pointwise_max(other.xy2))
 
-    def intersect(self, other: Bbox):
+    def intersect(self, other):
         if other is None:
             return self
 
@@ -439,10 +438,10 @@ class Angle(Geom):
     def Rad(rad):
         return Angle(np.rad2deg(rad))
 
-    def __add__(self, other: Angle):
+    def __add__(self, other):
         return Angle(self.deg + other.deg)
 
-    def __sub__(self, other: Angle):
+    def __sub__(self, other):
         return self + other.__neg__()
 
     def __mul__(self, lmbda):

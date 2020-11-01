@@ -1,4 +1,3 @@
-from __future__ import annotations
 import torch
 import torch.utils.data
 from typing import Union

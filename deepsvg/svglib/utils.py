@@ -2,7 +2,6 @@ import deepsvg.svglib.svg as svg_lib
 from .geom import Bbox, Point
 import math
 import numpy as np
-import IPython.display as ipd
 from moviepy.editor import ImageClip, concatenate_videoclips, ipython_display
 
 
@@ -85,6 +84,4 @@ def to_gif(img_list, file_path=None, frame_duration=0.1, do_display=True):
     if file_path is not None:
         clip.write_gif(file_path, fps=24, verbose=False, logger=None)
 
-    if do_display:
-        src = clip if file_path is None else file_path
-        ipd.display(ipython_display(src, fps=24, rd_kwargs=dict(logger=None), autoplay=1, loop=1))
+    

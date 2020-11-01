@@ -71,7 +71,6 @@ class Stats:
         self.stats_to_print[split].update(stats_to_print)
 
     def get_summary(self, split):
-
         if split == "train":
             completion_pct = self.step / self.num_steps * 100
             eta_seconds = self.stats[split].get("time").global_avg * (self.num_steps - self.step)
@@ -80,7 +79,6 @@ class Stats:
             s = "[{}/{}, {:.1f}%] eta: {}, ".format(self.step, self.num_steps, completion_pct, eta_string)
         else:
             s = f"[Validation, epoch {self.epoch + 1}] "
-
         return s + ", ".join(f"{stat}: {self.stats[split].get(stat).median:.4f}" for stat in self.stats_to_print[split])
 
     def write_tensorboard(self, summary_writer, split):

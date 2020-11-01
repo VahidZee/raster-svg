@@ -1,14 +1,11 @@
-from __future__ import annotations
 from .geom import *
 from xml.dom import expatbuilder
 import torch
 from typing import List, Union
-import IPython.display as ipd
 import cairosvg
 from PIL import Image
 import io
 import os
-from moviepy.editor import ImageClip, concatenate_videoclips, ipython_display
 import math
 import random
 import networkx as nx
@@ -29,7 +26,7 @@ class SVG:
         self.svg_path_groups = svg_path_groups
         self.viewbox = viewbox
 
-    def __add__(self, other: SVG):
+    def __add__(self, other):
         svg = self.copy()
         svg.svg_path_groups.extend(other.svg_path_groups)
         return svg
@@ -187,8 +184,6 @@ class SVG:
         svg_str = self.to_str(fill=fill, with_points=with_points, with_handles=with_handles, with_bboxes=with_bboxes,
                               with_markers=with_markers, color_firstlast=color_firstlast, with_moves=with_moves)
 
-        if do_display:
-            ipd.display(ipd.SVG(svg_str))
 
         if return_png:
             if file_path is None:
@@ -377,17 +372,6 @@ class SVG:
 
         return clips
 
-    def animate(self, file_path=None, frame_duration=0.1, do_display=True):
-        clips = self.to_video(lambda img: ImageClip(img).set_duration(frame_duration))
-
-        clip = concatenate_videoclips(clips, method="compose", bg_color=(255, 255, 255))
-
-        if file_path is not None:
-            clip.write_gif(file_path, fps=24, verbose=False, logger=None)
-
-        if do_display:
-            src = clip if file_path is None else file_path
-            ipd.display(ipython_display(src, fps=24, rd_kwargs=dict(logger=None), autoplay=1, loop=1))
 
     def numericalize(self, n=256):
         self.normalize(viewbox=Bbox(n))
