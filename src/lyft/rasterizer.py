@@ -57,6 +57,8 @@ def lane_color(path_number):
 def crop_tensor(vector, raster_size):
     vector = vector[(vector[:, 0] >= 0.) * (vector[:, 0] <= raster_size[0])]
     vector = vector[(vector[:, 1] >= 0.) * (vector[:, 1] <= raster_size[1])]
+    vector[:, 0] = (vector[:, 0] / raster_size[0]) * 24
+    vector[:, 1] = (vector[:, 1] / raster_size[1]) * 24
     return vector
 
 
