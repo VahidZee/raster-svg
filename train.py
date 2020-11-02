@@ -103,15 +103,15 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
     if not resume == " " and ckpt_exists:
         print(f"Resuming model at epoch {stats.epoch+1}")
         stats.num_steps = model_cfg.num_epochs * len(train_dataloader)
-    if True:
-        # Run a single forward pass on the single-device model for initialization of some modules
-        single_foward_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True,
-                                              num_workers=model_cfg.loader_num_workers , collate_fn=my_collate)
-        data = next(iter(single_foward_dataloader))
-        if data is not None:
-            model_args, params_dict = [data['image'][arg].to(device) for arg in model_cfg.model_args], model_cfg.get_params(0, 0)
-            entery = [*model_args,{},True]
-            out = model(entery)
+    # if True:
+    #     # Run a single forward pass on the single-device model for initialization of some modules
+    #     single_foward_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True,
+    #                                           num_workers=model_cfg.loader_num_workers , collate_fn=my_collate)
+    #     data = next(iter(single_foward_dataloader))
+    #     if data is not None:
+    #         model_args, params_dict = [data['image'][arg].to(device) for arg in model_cfg.model_args], model_cfg.get_params(0, 0)
+    #         entery = [*model_args,{},True]
+    #         out = model(entery)
 
     model = nn.DataParallel(model)
 
@@ -179,6 +179,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
 def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,timer):
     model.eval()
+    print("validation")
     for n_iter, data in enumerate(val_dataloader):
         if data is None:
             continue
@@ -203,7 +204,7 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
         loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
 
         stats.update_stats_to_print("val", loss_dict)
-
+        print(step,epoch)
         stats.update("val", step, epoch, {
             **loss_dict
         })
@@ -217,8 +218,8 @@ if __name__ == "__main__":
     parser.add_argument("--log-dir", type=str, default="./logs")
     parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument("--resume", type=str, default=" ")
-    parser.add_argument("--val_idxs", type=str, default=None)
-    parser.add_argument("--train_idxs", type=str, default=None)
+    parser.add_argument("--val-idxs", type=str, default=None)
+    parser.add_argument("--train-idxs", type=str, default=None)
 
     args = parser.parse_args()
 
