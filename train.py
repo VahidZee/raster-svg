@@ -1,19 +1,15 @@
-from argparse import ArgumentParser
-import typing as th
-from torch.utils.data import DataLoader, Subset, random_split, Dataset
-import pandas as pd
-import numpy as np
+from torch.utils.data import DataLoader, Subset
 from deepsvg.config import _Config
 import torch.nn as nn
-from src.lyft.data import build_rasterizer, AgentDataset
+from src.lyft.data import build_rasterizer
 from l5kit.data import LocalDataManager, ChunkedDataset
 import argparse
 import importlib
 from l5kit.configs import load_config_data
-from src.lyft.data import AgentDataset
+from src.model.svg_dataset import SVGDataset
 
-from src.lyft.models.model_trajectory import ModelTrajectory
-from src.lyft.train.utils import neg_multi_log_likelihood
+from src.model.models.model_trajectory import ModelTrajectory
+from src.model.utils import neg_multi_log_likelihood
 
 from deepsvg.utils import Stats, TrainVars, Timer
 import torch
@@ -41,35 +37,52 @@ def my_collate(batch):
       return
 
 
-def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="", log_dir="./logs", debug=False, resume=" "):
+def train(model_cfg:_Config, args, model_name, experiment_name="", log_dir="./logs", debug=False, resume=" "):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # set env variable for data
-    model_cfg.print_params()
-    dm = LocalDataManager(data_path)
-    # get config
-    rasterizer = build_rasterizer(data_cfg, dm)
+    if args.data_type == "lyft":
+        data_cfg = load_config_data(args.config_data)
+        # set env variable for data
+        model_cfg.print_params()
+        dm = LocalDataManager(args.data_path)
+        # get config
+        rasterizer = build_rasterizer(data_cfg, dm)
 
-    train_zarr = ChunkedDataset(dm.require(data_cfg["train_dataloader"]["split"])).open()
-    val_zarr = ChunkedDataset(dm.require(data_cfg["val_dataloader"]["split"])).open()
+        train_zarr = ChunkedDataset(dm.require(data_cfg["train_dataloader"]["split"])).open()
+        val_zarr = ChunkedDataset(dm.require(data_cfg["val_dataloader"]["split"])).open()
 
-    train_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = train_zarr, rasterizer = rasterizer,
-                                 model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len)
-    val_dataset = AgentDataset(data_cfg=data_cfg, zarr_dataset = val_zarr, rasterizer = rasterizer,
-                                 model_args=model_cfg.model_args, max_num_groups=model_cfg.max_num_groups,
-                                 max_seq_len=model_cfg.max_seq_len)
+        train_dataset = SVGDataset(data_type = "lyft",model_args=model_cfg.model_args,
+                                   max_num_groups=model_cfg.max_num_groups, max_seq_len=model_cfg.max_seq_len,
+                                   data_cfg=data_cfg, zarr_dataset = train_zarr, rasterizer = rasterizer)
+        val_dataset = SVGDataset(data_type = "lyft",model_args=model_cfg.model_args,
+                                 max_num_groups=model_cfg.max_num_groups, max_seq_len=model_cfg.max_seq_len,
+                                 data_cfg=data_cfg, zarr_dataset = val_zarr, rasterizer = rasterizer)
 
-    if model_cfg.train_idxs is not None:
-        train_dataset = Subset(train_dataset, pd.read_csv(model_cfg.train_idxs)['idx'])
-    if model_cfg.val_idxs is not None:
-        val_dataset = Subset(val_dataset, pd.read_csv(model_cfg.val_idxs)['idx'])
+        if model_cfg.train_idxs is not None:
+            train_dataset = Subset(train_dataset, pd.read_csv(model_cfg.train_idxs)['idx'])
+        if model_cfg.val_idxs is not None:
+            val_dataset = Subset(val_dataset, pd.read_csv(model_cfg.val_idxs)['idx'])
+
+        criterion = neg_multi_log_likelihood
+    elif args.data_type == "argo":
+        data_dict = baseline_utils.get_data(args, baseline_key)
+
+
+        # # Get PyTorch Dataset
+        train_dataset = SVGDataset(data_type = "argo",model_args=model_cfg.model_args,
+                                   max_num_groups=model_cfg.max_num_groups,max_seq_len=model_cfg.max_seq_len,
+                                   data_dict=data_dict, args=args, mode="train")
+
+        val_dataset = SVGDataset(data_type = "argo",model_args=model_cfg.model_args,
+                                 max_num_groups=model_cfg.max_num_groups,max_seq_len=model_cfg.max_seq_len,
+                                 data_dict=data_dict, args=args, mode="val")
+        criterion= nn.MSELoss()
 
     train_dataloader = DataLoader(train_dataset, batch_size=model_cfg.train_batch_size, shuffle=True,
                             num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
     validat_dataloader = DataLoader(val_dataset, batch_size=model_cfg.val_batch_size, shuffle=False,
                                   num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
 
-    model = ModelTrajectory(model_cfg=model_cfg, data_config= data_cfg, modes=3).to(device)
+    model = ModelTrajectory(model_cfg=model_cfg, data_config= data_cfg, modes=args.modes).to(device)
     stats = Stats(num_steps=model_cfg.num_steps, num_epochs=model_cfg.num_epochs, steps_per_epoch=len(train_dataloader),
                   stats_to_print=model_cfg.stats_to_print)
     stats.stats['val'] = defaultdict(SmoothedValue)
@@ -138,7 +151,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
                 entery = [*model_args, params_dict, True]
                 output,conf = model(entery)
                 loss_dict = {}
-                loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
+                loss_dict['loss'] = criterion(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
                 if step >= optimizer_start:
                     loss_dict['loss'].backward()
                     if model_cfg.grad_clip is not None:
@@ -168,7 +181,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
             if step % model_cfg.val_every == 0:
                 timer.reset()
-                validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer)
+                validation(validat_dataloader, model, model_cfg, device, criterion, epoch, stats, summary_writer, timer)
 
             if not debug and step % model_cfg.ckpt_every == 0:
                 utils.save_ckpt_list(checkpoint_dir, model, model_cfg, optimizers, scheduler_lrs, scheduler_warmups, stats, train_vars)
@@ -177,7 +190,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
 
 
-def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,timer):
+def validation(val_dataloader,model,model_cfg,device, criterion, epoch,stats,summary_writer,timer):
     model.eval()
     for n_iter, data in enumerate(val_dataloader):
         if data is None:
@@ -200,7 +213,7 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
         entery = [*model_args, params_dict, True]
         output,conf = model(entery)
         loss_dict = {}
-        loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
+        loss_dict['loss'] = criterion(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
 
         stats.update_stats_to_print("val", loss_dict)
 
@@ -212,13 +225,75 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='DeepSVG Trainer')
     parser.add_argument("--config-module", type=str, required=True)
-    parser.add_argument("--config-data", type=str, required=True)
     parser.add_argument("--data-path", type=str, required=True)
     parser.add_argument("--log-dir", type=str, default="./logs")
     parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument("--resume", type=str, default=" ")
-    parser.add_argument("--val_idxs", type=str, default=None)
-    parser.add_argument("--train_idxs", type=str, default=None)
+    parser.add_argument("--data-type", type=str, default=None)
+    parser.add_argument("--modes", type=int, default=3)
+    #lyft
+    parser.add_argument("--config-data", type=str, required=True)
+    parser.add_argument("--val-idxs", type=str, default=None)
+    parser.add_argument("--train-idxs", type=str, default=None)
+    #argo
+    parser.add_argument("--obs_len",
+                        default=20,
+                        type=int,
+                        help="Observed length of the trajectory")
+    parser.add_argument("--pred_len",
+                        default=30,
+                        type=int,
+                        help="Prediction Horizon")
+    parser.add_argument(
+        "--normalize",
+        action="store_true",
+        help="Normalize the trajectories if non-map baseline is used",
+    )
+    parser.add_argument(
+        "--use_delta",
+        action="store_true",
+        help="Train on the change in position, instead of absolute position",
+    )
+    parser.add_argument(
+        "--train_features",
+        default="",
+        type=str,
+        help="path to the file which has train features.",
+    )
+    parser.add_argument(
+        "--val_features",
+        default="",
+        type=str,
+        help="path to the file which has val features.",
+    )
+    parser.add_argument(
+        "--test_features",
+        default="",
+        type=str,
+        help="path to the file which has test features.",
+    )
+    parser.add_argument(
+        "--joblib_batch_size",
+        default=100,
+        type=int,
+        help="Batch size for parallel computation",
+    )
+    parser.add_argument("--use_map",
+                        action="store_true",
+                        help="Use the map based features")
+    parser.add_argument("--use_social",
+                        action="store_true",
+                        help="Use social features")
+    parser.add_argument("--test",
+                        action="store_true",
+                        help="If true, only run the inference")
+    parser.add_argument(
+        "--traj_save_path",
+        required=False,
+        type=str,
+        help=
+        "path to the pickle file where forecasted trajectories will be saved.",
+    )
 
     args = parser.parse_args()
 
@@ -229,5 +304,7 @@ if __name__ == "__main__":
         cfg.val_idxs = args.val_idxs
     if args.train_idxs is not None:
         cfg.train_idxs = args.train_idxs
-    config_data = load_config_data(args.config_data)
-    train(cfg, config_data, args.data_path, model_name, experiment_name, log_dir=args.log_dir, debug=args.debug, resume=args.resume)
+    train(model_cfg=cfg, args=args,
+          model_name=model_name, experiment_name=experiment_name,
+          log_dir=args.log_dir, debug=args.debug, resume=args.resume)
+
