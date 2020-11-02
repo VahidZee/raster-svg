@@ -34,7 +34,7 @@ class _DefaultConfig:
         self.n_layers_decode = 4         # Number of Decoder blocks
         self.n_heads = 8                 # Transformer config: number of heads
         self.dim_feedforward = 512       # Transformer config: FF dimensionality
-        self.d_model = 256               # Transformer config: model dimensionality
+        self.d_model = 256               # Transformer config: model_and_dataset dimensionality
 
         self.dim_z = 256                 # Latent vector dimensionality
 

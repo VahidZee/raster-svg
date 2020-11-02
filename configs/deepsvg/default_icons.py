@@ -15,7 +15,7 @@ import random
 
 class ModelConfig(Hierarchical):
     """
-    Overriding default model config.
+    Overriding default model_and_dataset config.
     """
     def __init__(self):
         super().__init__()

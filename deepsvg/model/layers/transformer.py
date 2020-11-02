@@ -13,19 +13,19 @@ from .attention import MultiheadAttention
 
 
 class Transformer(Module):
-    r"""A transformer model. User is able to modify the attributes as needed. The architecture
+    r"""A transformer model_and_dataset. User is able to modify the attributes as needed. The architecture
     is based on the paper "Attention Is All You Need". Ashish Vaswani, Noam Shazeer,
     Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Lukasz Kaiser, and
     Illia Polosukhin. 2017. Attention is all you need. In Advances in Neural Information
     Processing Systems, pages 6000-6010. Users can build the BERT(https://arxiv.org/abs/1810.04805)
-    model with corresponding parameters.
+    model_and_dataset with corresponding parameters.
 
     Args:
         d_model: the number of expected features in the encoder/decoder inputs (default=512).
         nhead: the number of heads in the multiheadattention models (default=8).
         num_encoder_layers: the number of sub-encoder-layers in the encoder (default=6).
         num_decoder_layers: the number of sub-decoder-layers in the decoder (default=6).
-        dim_feedforward: the dimension of the feedforward network model (default=2048).
+        dim_feedforward: the dimension of the feedforward network model_and_dataset (default=2048).
         dropout: the dropout value (default=0.1).
         activation: the activation function of encoder/decoder intermediate layer, relu or gelu (default=relu).
         custom_encoder: custom encoder (default=None).
@@ -37,7 +37,7 @@ class Transformer(Module):
         >>> tgt = torch.rand((20, 32, 512))
         >>> out = transformer_model(src, tgt)
 
-    Note: A full example to apply nn.Transformer module for the word language model is available in
+    Note: A full example to apply nn.Transformer module for the word language model_and_dataset is available in
     https://github.com/pytorch/examples/tree/master/word_language_model
     """
 
@@ -102,7 +102,7 @@ class Transformer(Module):
 
             - output: :math:`(T, N, E)`.
 
-            Note: Due to the multi-head attention architecture in the transformer model,
+            Note: Due to the multi-head attention architecture in the transformer model_and_dataset,
             the output sequence length of a transformer is same as the input sequence
             (i.e. target) length of the decode.
 
@@ -136,7 +136,7 @@ class Transformer(Module):
 
 
     def _reset_parameters(self):
-        r"""Initiate parameters in the transformer model."""
+        r"""Initiate parameters in the transformer model_and_dataset."""
 
         for p in self.parameters():
             if p.dim() > 1:
@@ -253,7 +253,7 @@ class TransformerEncoderLayer(Module):
     Args:
         d_model: the number of expected features in the input (required).
         nhead: the number of heads in the multiheadattention models (required).
-        dim_feedforward: the dimension of the feedforward network model (default=2048).
+        dim_feedforward: the dimension of the feedforward network model_and_dataset (default=2048).
         dropout: the dropout value (default=0.1).
         activation: the activation function of intermediate layer, relu or gelu (default=relu).
 
@@ -266,7 +266,7 @@ class TransformerEncoderLayer(Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu"):
         super(TransformerEncoderLayer, self).__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
-        # Implementation of Feedforward model
+        # Implementation of Feedforward model_and_dataset
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout = Dropout(dropout)
         self.linear2 = Linear(dim_feedforward, d_model)
@@ -316,7 +316,7 @@ class TransformerDecoderLayer(Module):
     Args:
         d_model: the number of expected features in the input (required).
         nhead: the number of heads in the multiheadattention models (required).
-        dim_feedforward: the dimension of the feedforward network model (default=2048).
+        dim_feedforward: the dimension of the feedforward network model_and_dataset (default=2048).
         dropout: the dropout value (default=0.1).
         activation: the activation function of intermediate layer, relu or gelu (default=relu).
 
@@ -331,7 +331,7 @@ class TransformerDecoderLayer(Module):
         super(TransformerDecoderLayer, self).__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
         self.multihead_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
-        # Implementation of Feedforward model
+        # Implementation of Feedforward model_and_dataset
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout = Dropout(dropout)
         self.linear2 = Linear(dim_feedforward, d_model)

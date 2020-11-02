@@ -10,7 +10,7 @@ from .functional import multi_head_attention_forward
 
 
 class MultiheadAttention(Module):
-    r"""Allows the model to jointly attend to information
+    r"""Allows the model_and_dataset to jointly attend to information
     from different representation subspaces.
     See reference: Attention Is All You Need
 
@@ -19,7 +19,7 @@ class MultiheadAttention(Module):
         \text{where} head_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)
 
     Args:
-        embed_dim: total dimension of the model.
+        embed_dim: total dimension of the model_and_dataset.
         num_heads: parallel attention heads.
         dropout: a Dropout layer on attn_output_weights. Default: 0.0.
         bias: add bias as module parameter. Default: True.

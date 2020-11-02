@@ -11,13 +11,13 @@ def run(
     deterministic=False,
     
 ):
-    # Setup seed to have same model's initialization:
+    # Setup seed to have same model_and_dataset's initialization:
     manual_seed(75)
 
     train_loader, eval_dataloader  = get_data_loaders(args)
     model = LyftMultiModel()
     criterion = nn.MSELoss()
-    model.to(device)  # Move model before creating optimizer
+    model.to(device)  # Move model_and_dataset before creating optimizer
 
     
     
@@ -82,7 +82,7 @@ def run(
         writer.add_scalar("valdation/avg_loss", avg_nll, engine.state.iteration)
 
     # Setup object to checkpoint
-    objects_to_checkpoint = {"trainer": trainer, "model": model, "optimizer": optimizer, "lr_scheduler": lr_scheduler}
+    objects_to_checkpoint = {"trainer": trainer, "model_and_dataset": model, "optimizer": optimizer, "lr_scheduler": lr_scheduler}
     training_checkpoint = Checkpoint(
         to_save=objects_to_checkpoint,
         save_handler=DiskSaver(log_dir, require_empty=False),

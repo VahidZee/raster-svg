@@ -64,7 +64,7 @@ def train(cfg: _Config, model_name, experiment_name="", log_dir="./logs", debug=
         print(f"Resuming model at epoch {stats.epoch+1}")
         stats.num_steps = cfg.num_epochs * len(dataloader)
     else:
-        # Run a single forward pass on the single-device model for initialization of some modules
+        # Run a single forward pass on the single-device model_and_dataset for initialization of some modules
         single_foward_dataloader = DataLoader(dataset, batch_size=cfg.batch_size // cfg.num_gpus, shuffle=True, drop_last=True,
                                       num_workers=cfg.loader_num_workers, collate_fn=cfg.collate_fn)
         data = next(iter(single_foward_dataloader))

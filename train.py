@@ -6,10 +6,10 @@ from l5kit.data import LocalDataManager, ChunkedDataset
 import argparse
 import importlib
 from l5kit.configs import load_config_data
-from src.model.svg_dataset import SVGDataset
+from src.model_and_dataset.svg_dataset import SVGDataset
 
-from src.model.models.model_trajectory import ModelTrajectory
-from src.model.utils import neg_multi_log_likelihood
+from src.model_and_dataset.models.model_trajectory import ModelTrajectory
+from src.model_and_dataset.utils import neg_multi_log_likelihood
 
 from deepsvg.utils import Stats, TrainVars, Timer
 import torch
@@ -117,7 +117,7 @@ def train(model_cfg:_Config, args, model_name, experiment_name="", log_dir="./lo
         print(f"Resuming model at epoch {stats.epoch+1}")
         stats.num_steps = model_cfg.num_epochs * len(train_dataloader)
     if True:
-        # Run a single forward pass on the single-device model for initialization of some modules
+        # Run a single forward pass on the single-device model_and_dataset for initialization of some modules
         single_foward_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True,
                                               num_workers=model_cfg.loader_num_workers , collate_fn=my_collate)
         data = next(iter(single_foward_dataloader))

@@ -632,12 +632,12 @@ def get_model(
         args: Any,
         pred_horizon: int,
 ) -> Any:
-    """Get the trained model after running grid search or load a saved one.
+    """Get the trained model_and_dataset after running grid search or load a saved one.
 
     Args:
         regressor: Nearest Neighbor regressor class instance 
-        train_input: Input to the model
-        train_output: Ground truth for the model
+        train_input: Input to the model_and_dataset
+        train_output: Ground truth for the model_and_dataset
         args: Arguments passed to the baseline
         pred_horizon: Prediction Horizon
 
@@ -645,10 +645,10 @@ def get_model(
         grid_search: sklearn GridSearchCV object
 
     """
-    # Load model
+    # Load model_and_dataset
     if args.test:
 
-        # Load a trained model
+        # Load a trained model_and_dataset
         with open(args.model_path, "rb") as f:
             grid_search = pkl.load(f)
         print(f"## Loaded {args.model_path} ....")
@@ -666,7 +666,7 @@ def get_model(
         os.makedirs(os.path.dirname(args.model_path), exist_ok=True)
         with open(args.model_path, "wb") as f:
             pkl.dump(grid_search, f)
-        print(f"Trained model saved at... {args.model_path}")
+        print(f"Trained model_and_dataset saved at... {args.model_path}")
 
     return grid_search
 

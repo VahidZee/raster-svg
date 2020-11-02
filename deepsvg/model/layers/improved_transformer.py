@@ -21,7 +21,7 @@ class TransformerEncoderLayerImproved(Module):
         if d_global2 is not None:
             self.linear_global2 = Linear(d_global2, d_model)
 
-        # Implementation of Feedforward model
+        # Implementation of Feedforward model_and_dataset
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout = Dropout(dropout)
         self.linear2 = Linear(dim_feedforward, d_model)
@@ -59,7 +59,7 @@ class TransformerDecoderLayerImproved(Module):
         super(TransformerDecoderLayerImproved, self).__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
         self.multihead_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
-        # Implementation of Feedforward model
+        # Implementation of Feedforward model_and_dataset
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout = Dropout(dropout)
         self.linear2 = Linear(dim_feedforward, d_model)
@@ -104,7 +104,7 @@ class TransformerDecoderLayerGlobalImproved(Module):
         if d_global2 is not None:
             self.linear_global2 = Linear(d_global2, d_model)
 
-        # Implementation of Feedforward model
+        # Implementation of Feedforward model_and_dataset
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout = Dropout(dropout)
         self.linear2 = Linear(dim_feedforward, d_model)

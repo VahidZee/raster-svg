@@ -253,7 +253,7 @@ def pytorch_neg_multi_log_likelihood_batch(
 
 
 def log_model_weights(engine, model=None, fp=None, **kwargs):
-    """Helper method to log norms of model weights: print and dump into a file
+    """Helper method to log norms of model_and_dataset weights: print and dump into a file
     """
     assert model and fp
     output = {"total": 0.0}
@@ -276,7 +276,7 @@ def log_model_weights(engine, model=None, fp=None, **kwargs):
 
 
 def log_model_grads(engine, model=None, fp=None, **kwargs):
-    """Helper method to log norms of model gradients: print and dump into a file
+    """Helper method to log norms of model_and_dataset gradients: print and dump into a file
     """
     assert model and fp
     output = {"grads/total": 0.0}

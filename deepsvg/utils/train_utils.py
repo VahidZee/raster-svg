@@ -13,7 +13,7 @@ def save_ckpt(checkpoint_dir, model, cfg=None, optimizer=None, scheduler_lr=None
         model = model.module
 
     state = {
-        "model": model.state_dict()
+        "model_and_dataset": model.state_dict()
     }
 
     if optimizer is not None:
@@ -46,7 +46,7 @@ def save_ckpt_list(checkpoint_dir, model, cfg=None, optimizers=None, scheduler_l
         model = model.module
 
     state = {
-        "model": model.state_dict()
+        "model_and_dataset": model.state_dict()
     }
 
     if optimizers is not None:
@@ -90,7 +90,7 @@ def load_ckpt(checkpoint_dir, model, cfg=None, optimizer=None, scheduler_lr=None
 
     if is_multi_gpu(model):
         model = model.module
-    model.load_state_dict(state["model"], strict=False)
+    model.load_state_dict(state["model_and_dataset"], strict=False)
 
     if optimizer is not None:
         optimizer.load_state_dict(state["optimizer"])
@@ -125,7 +125,7 @@ def load_ckpt_list(checkpoint_dir, model, cfg=None, optimizers=None, scheduler_l
 
     if is_multi_gpu(model):
         model = model.module
-    model.load_state_dict(state["model"], strict=False)
+    model.load_state_dict(state["model_and_dataset"], strict=False)
 
     for optimizer, scheduler_lr, scheduler_warmup, optimizer_sd, scheduler_lr_sd, scheduler_warmups_sd in zip(optimizers, scheduler_lrs, scheduler_warmups, state["optimizers"], state["scheduler_lrs"], state["scheduler_warmups"]):
         if optimizer is not None and optimizer_sd is not None:
@@ -149,7 +149,7 @@ def load_model(checkpoint_path, model):
 
     if is_multi_gpu(model):
         model = model.module
-    model.load_state_dict(state["model"], strict=False)
+    model.load_state_dict(state["model_and_dataset"], strict=False)
 
 
 def is_multi_gpu(model):

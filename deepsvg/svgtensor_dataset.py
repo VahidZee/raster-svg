@@ -207,7 +207,7 @@ class SVGTensorDataset(torch.utils.data.Dataset):
 
 class SVGFinetuneDataset(torch.utils.data.Dataset):
     """
-    Wrapper around SVGTensorDataset intended to finetune a model on a list of additional SVGs.
+    Wrapper around SVGTensorDataset intended to finetune a model_and_dataset on a list of additional SVGs.
     Randomly samples fraction `frac` of SVGs to be finetuned and `1-frac` of data from the original SVGTensorDataset.
     """
     def __init__(self, original_dataset: SVGTensorDataset, svg_list: List[SVG], frac=0.5, nb_augmentations=20):
