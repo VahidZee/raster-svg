@@ -63,6 +63,7 @@ def train(model_cfg:_Config, args, model_name, experiment_name="", log_dir="./lo
             val_dataset = Subset(val_dataset, pd.read_csv(model_cfg.val_idxs)['idx'])
 
         criterion = neg_multi_log_likelihood
+        model = ModelTrajectory(model_cfg=model_cfg, data_config=data_cfg, modes=args.modes).to(device)
     elif args.data_type == "argo":
         data_dict = baseline_utils.get_data(args, baseline_key)
 
@@ -76,13 +77,13 @@ def train(model_cfg:_Config, args, model_name, experiment_name="", log_dir="./lo
                                  max_num_groups=model_cfg.max_num_groups,max_seq_len=model_cfg.max_seq_len,
                                  data_dict=data_dict, args=args, mode="val")
         criterion= nn.MSELoss()
+        model = ModelTrajectory(model_cfg=model_cfg, modes=args.modes, future_len=60, in_channels=3).to(device)
 
     train_dataloader = DataLoader(train_dataset, batch_size=model_cfg.train_batch_size, shuffle=True,
                             num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
     validat_dataloader = DataLoader(val_dataset, batch_size=model_cfg.val_batch_size, shuffle=False,
                                   num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
 
-    model = ModelTrajectory(model_cfg=model_cfg, data_config= data_cfg, modes=args.modes).to(device)
     stats = Stats(num_steps=model_cfg.num_steps, num_epochs=model_cfg.num_epochs, steps_per_epoch=len(train_dataloader),
                   stats_to_print=model_cfg.stats_to_print)
     stats.stats['val'] = defaultdict(SmoothedValue)
@@ -225,16 +226,16 @@ def validation(val_dataloader,model,model_cfg,device, criterion, epoch,stats,sum
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='DeepSVG Trainer')
     parser.add_argument("--config-module", type=str, required=True)
-    parser.add_argument("--data-path", type=str, required=True)
     parser.add_argument("--log-dir", type=str, default="./logs")
     parser.add_argument("--debug", action="store_true", default=False)
-    parser.add_argument("--resume", type=str, default=" ")
+    parser.add_argument("--resume", type=bool, default=False)
     parser.add_argument("--data-type", type=str, default=None)
     parser.add_argument("--modes", type=int, default=3)
     #lyft
     parser.add_argument("--config-data", type=str, required=True)
     parser.add_argument("--val-idxs", type=str, default=None)
     parser.add_argument("--train-idxs", type=str, default=None)
+    parser.add_argument("--data-path", type=str, required=True)
     #argo
     parser.add_argument("--obs_len",
                         default=20,
