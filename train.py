@@ -66,7 +66,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
     train_dataloader = DataLoader(train_dataset, batch_size=model_cfg.train_batch_size, shuffle=True,
                             num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
-    validat_dataloader = DataLoader(val_dataset, batch_size=model_cfg.val_batch_size, shuffle=False,
+    validat_dataloader = DataLoader(val_dataset, batch_size=model_cfg.val_batch_size, shuffle=True,
                                   num_workers=model_cfg.loader_num_workers,collate_fn=my_collate)
 
     model = ModelTrajectory(model_cfg=model_cfg, data_config= data_cfg, modes=3).to(device)
@@ -118,6 +118,7 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
     epoch_range = utils.infinite_range(stats.epoch) if model_cfg.num_epochs is None else range(stats.epoch, cfg.num_epochs)
     print(epoch_range)
     timer.reset()
+    val_epoch = 0
     print(timer.get_elapsed_time())
     for epoch in epoch_range:
         print(f"Epoch {epoch+1}")
@@ -168,7 +169,8 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
             if step % model_cfg.val_every == 0:
                 timer.reset()
-                validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer)
+                validation(validat_dataloader, model, model_cfg, device, epoch, stats, summary_writer, timer,val_epoch)
+                val_epoch += 1
 
             if not debug and step % model_cfg.ckpt_every == 0:
                 utils.save_ckpt_list(checkpoint_dir, model, model_cfg, optimizers, scheduler_lrs, scheduler_warmups, stats, train_vars)
@@ -177,18 +179,17 @@ def train(model_cfg:_Config,data_cfg, data_path, model_name, experiment_name="",
 
 
 
-def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,timer):
+def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,timer,val_epoch):
     model.eval()
-    print("validation")
     for n_iter, data in enumerate(val_dataloader):
         if data is None:
             continue
-        step = n_iter
+        step = n_iter + val_epoch * model_cfg.val_num_steps + 1
 
         model_args = [data['image'][arg].to(device) for arg in model_cfg.model_args]
         params_dict, weights_dict = model_cfg.get_params(step, epoch), model_cfg.get_weights(step, epoch)
 
-        if model_cfg.val_num_steps is not None and step > model_cfg.val_num_steps:
+        if model_cfg.val_num_steps is not None and step % model_cfg.val_num_steps == 0:
             stats.update("val", step, epoch, {
                 **weights_dict,
                 "time": timer.get_elapsed_time()
@@ -204,7 +205,6 @@ def validation(val_dataloader,model,model_cfg,device,epoch,stats,summary_writer,
         loss_dict['loss'] = neg_multi_log_likelihood(data['target_positions'].to(device), output, conf, data.get('target_availabilities', None).to(device)).mean()
 
         stats.update_stats_to_print("val", loss_dict)
-        print(step,epoch)
         stats.update("val", step, epoch, {
             **loss_dict
         })

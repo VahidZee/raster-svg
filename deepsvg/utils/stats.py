@@ -42,10 +42,8 @@ class Stats:
 
         if num_steps is not None:
             self.num_steps = num_steps
-            print(1,self.num_steps)
         else:
             self.num_steps = num_epochs * steps_per_epoch
-            print(2,self.num_steps)
 
         self.stats = {
             "train": defaultdict(SmoothedValue),
@@ -64,7 +62,6 @@ class Stats:
         self.epoch = epoch
 
         for k, v in dict.items():
-            print(k,v)
             if isinstance(v, torch.Tensor):
                 v = v.item()
             assert isinstance(v, (float, int))
@@ -85,11 +82,9 @@ class Stats:
         return s + ", ".join(f"{stat}: {self.stats[split].get(stat).median:.4f}" for stat in self.stats_to_print[split])
 
     def write_tensorboard(self, summary_writer, split):
-        print("tensor_board",split,self.epoch + 1, self.step)
         summary_writer.add_scalar(f"{split}/epoch", self.epoch + 1, self.step)
 
         for stat in self.stats_to_print[split]:
-            print("tensor_board",split, self.step)
             summary_writer.add_scalar(f"{split}/{stat}", self.stats[split].get(stat).median, self.step)
 
     def is_best(self):

@@ -19,28 +19,28 @@ class Config(Config):
         self.filter_category = None
         self.train_ratio = 1.0
 
-        self.max_num_groups = 200
+        self.max_num_groups = 250
         self.max_seq_len = 7
         self.max_total_len = 1400
 
 
 
         # Dataloader
-        self.loader_num_workers = 0
+        self.loader_num_workers = 32
 
         # Training
         self.num_epochs = 100
 
         # Optimization
-        self.learning_rate = 5e-4
-        self.train_batch_size = 2
-        self.val_batch_size = 2
+        self.learning_rate = 1e-4
+        self.train_batch_size = 16
+        self.val_batch_size = 16
 
         self.val_every = 300
         self.log_every = 100
         self.ckpt_every = 100
 
-        self.val_num_steps = 5
+        self.val_num_steps = 20
         self.stats_to_print = {
             "train": ["lr", "time"],
             "val": ["time"]

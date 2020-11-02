@@ -4,7 +4,7 @@ format_version: 4
 ###################
 ## Model options
 model_params:
-  history_num_frames: 10
+  history_num_frames: 0
   history_step_size: 1
   history_delta_time: 0.1
 
@@ -44,13 +44,13 @@ raster_params:
 ###################
 ## Data loader options
 train_dataloader:
-  split: "scenes/sample.zarr"
+  split: "scenes/train_full.zarr"
   batch_size: 2
   shuffle: True
   num_workers: 0
 
 val_dataloader:
-  split: "scenes/sample.zarr"
+  split: "scenes/validate.zarr"
   batch_size: 2
   shuffle: False
   num_workers: 0
